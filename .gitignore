@@ -1,2 +1,7 @@
+#ide
 .DS_Store
 .idea/
+
+#source files
+input/
+output/
