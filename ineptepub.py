@@ -436,8 +436,7 @@ class DecryptionDialog(Tkinter.Frame):
         for fname in dirlist:
             root, ext = os.path.splitext(fname)
             if re.match(match, ext, re.IGNORECASE):
-                argv = [sys.argv[0], keypath, inpath + fname, outpath + root + ".jb.decrypted.epub"]
-                #                self.status['text'] = 'Decrypting...'
+                argv = [sys.argv[0], keypath, inpath + fname, outpath + root + ".epub"]
                 self.status['text'] = 'Decrypting:' + fname
                 try:
                     cli_main(argv)
