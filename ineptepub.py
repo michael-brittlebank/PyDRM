@@ -35,6 +35,8 @@ __license__ = 'GPL v3'
 
 import sys
 import os
+import re
+import platform
 import zlib
 import zipfile
 from zipfile import ZipFile, ZIP_STORED, ZIP_DEFLATED
@@ -60,25 +62,25 @@ def _load_crypto_libcrypto():
 
     RSA_NO_PADDING = 3
     AES_MAXNR = 14
-    
+
     c_char_pp = POINTER(c_char_p)
     c_int_p = POINTER(c_int)
 
     class RSA(Structure):
         pass
     RSA_p = POINTER(RSA)
-    
+
     class AES_KEY(Structure):
         _fields_ = [('rd_key', c_long * (4 * (AES_MAXNR + 1))),
                     ('rounds', c_int)]
     AES_KEY_p = POINTER(AES_KEY)
-    
+
     def F(restype, name, argtypes):
         func = getattr(libcrypto, name)
         func.restype = restype
         func.argtypes = argtypes
         return func
-    
+
     d2i_RSAPrivateKey = F(RSA_p, 'd2i_RSAPrivateKey',
                           [RSA_p, c_char_pp, c_long])
     RSA_size = F(c_int, 'RSA_size', [RSA_p])
@@ -90,7 +92,7 @@ def _load_crypto_libcrypto():
     AES_cbc_encrypt = F(None, 'AES_cbc_encrypt',
                         [c_char_p, c_char_p, c_ulong, AES_KEY_p, c_char_p,
                          c_int])
-    
+
     class RSA(object):
         def __init__(self, der):
             buf = create_string_buffer(der)
@@ -98,7 +100,7 @@ def _load_crypto_libcrypto():
             rsa = self._rsa = d2i_RSAPrivateKey(None, pp, len(der))
             if rsa is None:
                 raise ADEPTError('Error parsing ADEPT user key DER')
-        
+
         def decrypt(self, from_):
             rsa = self._rsa
             to = create_string_buffer(RSA_size(rsa))
@@ -107,7 +109,7 @@ def _load_crypto_libcrypto():
             if dlen < 0:
                 raise ADEPTError('RSA decryption failed')
             return to[:dlen]
-    
+
         def __del__(self):
             if self._rsa is not None:
                 RSA_free(self._rsa)
@@ -120,7 +122,7 @@ def _load_crypto_libcrypto():
             rv = AES_set_decrypt_key(userkey, len(userkey) * 8, key)
             if rv < 0:
                 raise ADEPTError('Failed to initialize AES key')
-    
+
         def decrypt(self, data):
             out = create_string_buffer(len(data))
             iv = ("\x00" * self._blocksize)
@@ -138,13 +140,13 @@ def _load_crypto_pycrypto():
     # ASN.1 parsing code from tlslite
     class ASN1Error(Exception):
         pass
-    
+
     class ASN1Parser(object):
         class Parser(object):
             def __init__(self, bytes):
                 self.bytes = bytes
                 self.index = 0
-    
+
             def get(self, length):
                 if self.index + length > len(self.bytes):
                     raise ASN1Error("Error decoding ASN.1")
@@ -154,22 +156,22 @@ def _load_crypto_pycrypto():
                     x |= self.bytes[self.index]
                     self.index += 1
                 return x
-    
+
             def getFixBytes(self, lengthBytes):
                 bytes = self.bytes[self.index : self.index+lengthBytes]
                 self.index += lengthBytes
                 return bytes
-    
+
             def getVarBytes(self, lengthLength):
                 lengthBytes = self.get(lengthLength)
                 return self.getFixBytes(lengthBytes)
-    
+
             def getFixList(self, length, lengthList):
                 l = [0] * lengthList
                 for x in range(lengthList):
                     l[x] = self.get(length)
                 return l
-    
+
             def getVarList(self, length, lengthLength):
                 lengthList = self.get(lengthLength)
                 if lengthList % length != 0:
@@ -179,19 +181,19 @@ def _load_crypto_pycrypto():
                 for x in range(lengthList):
                     l[x] = self.get(length)
                 return l
-    
+
             def startLengthCheck(self, lengthLength):
                 self.lengthCheck = self.get(lengthLength)
                 self.indexCheck = self.index
-    
+
             def setLengthCheck(self, length):
                 self.lengthCheck = length
                 self.indexCheck = self.index
-    
+
             def stopLengthCheck(self):
                 if (self.index - self.indexCheck) != self.lengthCheck:
                     raise ASN1Error("Error decoding ASN.1")
-    
+
             def atLengthCheck(self):
                 if (self.index - self.indexCheck) < self.lengthCheck:
                     return False
@@ -199,13 +201,13 @@ def _load_crypto_pycrypto():
                     return True
                 else:
                     raise ASN1Error("Error decoding ASN.1")
-    
+
         def __init__(self, bytes):
             p = self.Parser(bytes)
             p.get(1)
             self.length = self._getASN1Length(p)
             self.value = p.getFixBytes(self.length)
-    
+
         def getChild(self, which):
             p = self.Parser(self.value)
             for x in range(which+1):
@@ -214,7 +216,7 @@ def _load_crypto_pycrypto():
                 length = self._getASN1Length(p)
                 p.getFixBytes(length)
             return ASN1Parser(p.bytes[markIndex:p.index])
-    
+
         def _getASN1Length(self, p):
             firstLength = p.get(1)
             if firstLength<=127:
@@ -242,7 +244,7 @@ def _load_crypto_pycrypto():
             for byte in bytes:
                 total = (total << 8) + byte
             return total
-    
+
         def decrypt(self, data):
             return self._rsa.decrypt(data)
 
@@ -356,12 +358,14 @@ class DecryptionDialog(Tkinter.Frame):
         button.grid(row=0, column=2)
         Tkinter.Label(body, text='Input file').grid(row=1)
         self.inpath = Tkinter.Entry(body, width=30)
+        self.inpath.insert(0, os.getcwd()+'/input')
         self.inpath.grid(row=1, column=1, sticky=sticky)
         button = Tkinter.Button(body, text="...", command=self.get_inpath)
         button.grid(row=1, column=2)
         Tkinter.Label(body, text='Output file').grid(row=2)
         self.outpath = Tkinter.Entry(body, width=30)
         self.outpath.grid(row=2, column=1, sticky=sticky)
+        self.outpath.insert(0, os.getcwd()+'/output')
         button = Tkinter.Button(body, text="...", command=self.get_outpath)
         button.grid(row=2, column=2)
         buttons = Tkinter.Frame(self)
@@ -386,10 +390,9 @@ class DecryptionDialog(Tkinter.Frame):
         return
 
     def get_inpath(self):
-        inpath = tkFileDialog.askopenfilename(
-            parent=None, title='Select ADEPT-encrypted EPUB file to decrypt',
-            defaultextension='.epub', filetypes=[('EPUB files', '.epub'),
-                                                 ('All files', '.*')])
+        inpath = tkFileDialog.askdirectory(parent=None, title='Select encrypted ePub source directory')
+        # defaultextension='.epub', filetypes=[('PDF files', '.pdf'),
+        #                                     ('All files', '.*')])
         if inpath:
             inpath = os.path.normpath(inpath)
             self.inpath.delete(0, Tkconstants.END)
@@ -397,10 +400,7 @@ class DecryptionDialog(Tkinter.Frame):
         return
 
     def get_outpath(self):
-        outpath = tkFileDialog.asksaveasfilename(
-            parent=None, title='Select unencrypted EPUB file to produce',
-            defaultextension='.epub', filetypes=[('EPUB files', '.epub'),
-                                                 ('All files', '.*')])
+        outpath = tkFileDialog.askdirectory(parent=None, title='Select directory to decrypt to')
         if outpath:
             outpath = os.path.normpath(outpath)
             self.outpath.delete(0, Tkconstants.END)
@@ -415,22 +415,36 @@ class DecryptionDialog(Tkinter.Frame):
             self.status['text'] = 'Specified key file does not exist'
             return
         if not inpath or not os.path.exists(inpath):
-            self.status['text'] = 'Specified input file does not exist'
+            self.status['text'] = 'Specified input directory does not exist'
             return
         if not outpath:
-            self.status['text'] = 'Output file not specified'
+            self.status['text'] = 'Output directory not specified'
             return
         if inpath == outpath:
-            self.status['text'] = 'Must have different input and output files'
+            self.status['text'] = 'Must have different input and output directory'
             return
-        argv = [sys.argv[0], keypath, inpath, outpath]
-        self.status['text'] = 'Decrypting...'
-        try:
-            cli_main(argv)
-        except Exception, e:
-            self.status['text'] = 'Error: ' + str(e)
-            return
-        self.status['text'] = 'File successfully decrypted'
+        dirlist = os.listdir(inpath)
+        # get regular expression match for epubs
+        match = r'.epub'
+        # determine if I need a slash or backslash (Windows or Linux/Unix/Mac OS
+        if platform.system() == 'Windows':
+            inpath += '\\'
+            outpath += '\\'
+        else:
+            inpath += '/'
+            outpath += '/'
+        for fname in dirlist:
+            root, ext = os.path.splitext(fname)
+            if re.match(match, ext, re.IGNORECASE):
+                argv = [sys.argv[0], keypath, inpath + fname, outpath + root + ".jb.decrypted.epub"]
+                #                self.status['text'] = 'Decrypting...'
+                self.status['text'] = 'Decrypting:' + fname
+                try:
+                    cli_main(argv)
+                except Exception, e:
+                    self.status['text'] = 'Error in: ' + fname + str(e)
+                    return
+                self.status['text'] = 'Finished decrypting ' + inpath
 
 def gui_main():
     root = Tkinter.Tk()
