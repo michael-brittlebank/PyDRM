@@ -455,6 +455,7 @@ class DecryptionDialog(Tkinter.Frame):
             inpath += '/'
             outpath += '/'
         totaldecrypted = 0
+        self.status['text'] = 'Starting decryption'
         for fname in dirlist:
             root, ext = os.path.splitext(fname)
             if re.match(match, ext, re.IGNORECASE):
@@ -465,16 +466,16 @@ class DecryptionDialog(Tkinter.Frame):
                 try:
                     cli_main(argv)
                 except Exception, e:
-                    self.status['text'] = 'Error decrypting ' + fname + str(e)
+                    self.status['text'] = 'Error decrypting '+fname+':'+str(e)
                     return
                 try:
                     if not os.path.exists(mobi):
                         os.system('ebook-convert '+os.path.join(pipes.quote(epub)+' '+pipes.quote(mobi)))
                 except Exception, e:
-                    self.status['text'] = 'Error converting ' + fname + str(e)+' to .mobi'
+                    self.status['text'] = 'Error converting '+fname+'to .mobi: '+str(e)
                     return
                 totaldecrypted = totaldecrypted+1
-                self.status['text'] = 'Finished decrypting ' + inpath
+                self.status['text'] = 'Finished decrypting ' + fname
         if totaldecrypted < 1:
             self.status['text'] = 'No EPUB files available to decrypt'
             return
