@@ -456,6 +456,8 @@ class DecryptionDialog(Tkinter.Frame):
             outpath += '/'
         totaldecrypted = 0
         self.status['text'] = 'Starting decryption'
+        #confirm conversion script is in PATH
+        converterinstalled = subprocess.call(['which', 'ebook-convert']) == 0
         for fname in dirlist:
             root, ext = os.path.splitext(fname)
             if re.match(match, ext, re.IGNORECASE):
@@ -469,7 +471,7 @@ class DecryptionDialog(Tkinter.Frame):
                     self.status['text'] = 'Error decrypting '+fname+':'+str(e)
                     return
                 try:
-                    if not os.path.exists(mobi):
+                    if not os.path.exists(mobi) and converterinstalled:
                         os.system('ebook-convert '+os.path.join(pipes.quote(epub)+' '+pipes.quote(mobi)))
                 except Exception, e:
                     self.status['text'] = 'Error converting '+fname+'to .mobi: '+str(e)
@@ -497,7 +499,7 @@ def gui_main():
             " installed separately.  Read the top-of-script comment for"
             " details.")
         return 1
-    root.title('INEPT EPUB Decrypter')
+    root.title('EPUB Decrypter & Converter')
     root.resizable(True, False)
     root.minsize(300, 0)
     #validate and generate decryption key
