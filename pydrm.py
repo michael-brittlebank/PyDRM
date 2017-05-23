@@ -47,6 +47,7 @@ import Tkconstants
 import tkFileDialog
 import tkMessageBox
 import subprocess
+import pipes
 
 cwdPath = os.getcwd()
 libPath = cwdPath+'/lib'
@@ -457,12 +458,20 @@ class DecryptionDialog(Tkinter.Frame):
         for fname in dirlist:
             root, ext = os.path.splitext(fname)
             if re.match(match, ext, re.IGNORECASE):
-                argv = [sys.argv[0], keypath, inpath + fname, outpath + root + ".epub"]
+                mobi = outpath + root + '.mobi'
+                epub = outpath + root + '.epub'
+                argv = [sys.argv[0], keypath, inpath + fname, epub]
                 self.status['text'] = 'Decrypting:' + fname
                 try:
                     cli_main(argv)
                 except Exception, e:
-                    self.status['text'] = 'Error in: ' + fname + str(e)
+                    self.status['text'] = 'Error decrypting ' + fname + str(e)
+                    return
+                try:
+                    if not os.path.exists(mobi):
+                        os.system('ebook-convert '+os.path.join(pipes.quote(epub)+' '+pipes.quote(mobi)))
+                except Exception, e:
+                    self.status['text'] = 'Error converting ' + fname + str(e)+' to .mobi'
                     return
                 totaldecrypted = totaldecrypted+1
                 self.status['text'] = 'Finished decrypting ' + inpath
