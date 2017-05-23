@@ -2,6 +2,4 @@
 
 ## How to run project ##
 
-Run ineptkey.pyw. It will create a key and write it to disk as "adeptkey.der".
-
-Run aineptepub.pyw and select the input and output folders with the GUI.
+Run pydrm.py.  It will create the "adeptkey.der" key automatically if it does not exist. Then select the input and output folders with the GUI.

@@ -5,3 +5,6 @@
 #source files
 input/
 output/
+
+#key file
+lib/adeptkey.der

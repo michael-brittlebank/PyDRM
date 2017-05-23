@@ -315,7 +315,7 @@ elif sys.platform.startswith('darwin'):
             raise ADEPTError("Could not locate ADE activation")
         tree = etree.parse(actpath)
         adept = lambda tag: '{%s}%s' % (NSMAP['adept'], tag)
-        expr = '//%s/%s' % (adept('credentials'), adept('privateLicenseKey'))
+        expr = './/%s/%s' % (adept('credentials'), adept('privateLicenseKey'))
         userkey = tree.findtext(expr)
         userkey = userkey.decode('base64')
         userkey = userkey[26:]
@@ -355,7 +355,9 @@ def main(argv=sys.argv):
     root = Tkinter.Tk()
     root.withdraw()
     progname = os.path.basename(argv[0])
-    keypath = 'adeptkey.der'
+    #ensure the key .der file is created in the /lib directory
+    currentdirectory = os.path.dirname(os.path.abspath(__file__))
+    keypath = currentdirectory+'/adeptkey.der'
     success = False
     try:
         success = retrieve_key(keypath)
@@ -369,9 +371,8 @@ def main(argv=sys.argv):
         root.mainloop()
     if not success:
         return 1
-    tkMessageBox.showinfo(
-        "ADEPT Key", "Key successfully retrieved to %s" % (keypath))
-    return 0
+    else:
+        return 0
 
 if __name__ == '__main__':
     sys.exit(main())

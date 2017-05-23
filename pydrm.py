@@ -46,6 +46,14 @@ import Tkinter
 import Tkconstants
 import tkFileDialog
 import tkMessageBox
+import subprocess
+
+cwdPath = os.getcwd()
+libPath = cwdPath+'/lib'
+keyPath = libPath+'/adeptkey.der'
+keyGenPath = libPath+'/keygen.py'
+outputPath = cwdPath+'/output'
+inputPath = cwdPath+'/input'
 
 class ADEPTError(Exception):
     pass
@@ -317,7 +325,7 @@ def cli_main(argv=sys.argv):
     with closing(ZipFile(open(inpath, 'rb'))) as inf:
         namelist = set(inf.namelist())
         if 'META-INF/rights.xml' not in namelist or \
-           'META-INF/encryption.xml' not in namelist:
+                        'META-INF/encryption.xml' not in namelist:
             raise ADEPTError('%s: not an ADEPT EPUB' % (inpath,))
         for name in META_NAMES:
             namelist.remove(name)
@@ -342,6 +350,7 @@ def cli_main(argv=sys.argv):
 
 class DecryptionDialog(Tkinter.Frame):
     def __init__(self, root):
+        global keyPath,inputPath,outputPath
         Tkinter.Frame.__init__(self, root, border=5)
         self.status = Tkinter.Label(self, text='Select files for decryption')
         self.status.pack(fill=Tkconstants.X, expand=1)
@@ -352,20 +361,19 @@ class DecryptionDialog(Tkinter.Frame):
         Tkinter.Label(body, text='Key file').grid(row=0)
         self.keypath = Tkinter.Entry(body, width=30)
         self.keypath.grid(row=0, column=1, sticky=sticky)
-        if os.path.exists('adeptkey.der'):
-            self.keypath.insert(0, 'adeptkey.der')
+        self.keypath.insert(0, keyPath)
         button = Tkinter.Button(body, text="...", command=self.get_keypath)
         button.grid(row=0, column=2)
         Tkinter.Label(body, text='Input file').grid(row=1)
         self.inpath = Tkinter.Entry(body, width=30)
-        self.inpath.insert(0, os.getcwd()+'/input')
+        self.inpath.insert(0, inputPath)
         self.inpath.grid(row=1, column=1, sticky=sticky)
         button = Tkinter.Button(body, text="...", command=self.get_inpath)
         button.grid(row=1, column=2)
         Tkinter.Label(body, text='Output file').grid(row=2)
         self.outpath = Tkinter.Entry(body, width=30)
         self.outpath.grid(row=2, column=1, sticky=sticky)
-        self.outpath.insert(0, os.getcwd()+'/output')
+        self.outpath.insert(0, outputPath)
         button = Tkinter.Button(body, text="...", command=self.get_outpath)
         button.grid(row=2, column=2)
         buttons = Tkinter.Frame(self)
@@ -379,10 +387,15 @@ class DecryptionDialog(Tkinter.Frame):
         button.pack(side=Tkconstants.RIGHT)
 
     def get_keypath(self):
+        global keyPath
         keypath = tkFileDialog.askopenfilename(
-            parent=None, title='Select ADEPT key file',
-            defaultextension='.der', filetypes=[('DER-encoded files', '.der'),
-                                                ('All Files', '.*')])
+            parent=None,
+            title='Select ADEPT key file',
+            defaultextension='.der',
+            filetypes=[('DER-encoded files', '.der'), ('All Files', '.*')],
+            initialfile=keyPath,
+            initialdir=libPath
+        )
         if keypath:
             keypath = os.path.normpath(keypath)
             self.keypath.delete(0, Tkconstants.END)
@@ -390,9 +403,12 @@ class DecryptionDialog(Tkinter.Frame):
         return
 
     def get_inpath(self):
-        inpath = tkFileDialog.askdirectory(parent=None, title='Select encrypted ePub source directory')
-        # defaultextension='.epub', filetypes=[('PDF files', '.pdf'),
-        #                                     ('All files', '.*')])
+        global inputPath
+        inpath = tkFileDialog.askdirectory(
+            parent=None,
+            title='Select encrypted ePub source directory',
+            initialdir=inputPath
+        )
         if inpath:
             inpath = os.path.normpath(inpath)
             self.inpath.delete(0, Tkconstants.END)
@@ -400,7 +416,12 @@ class DecryptionDialog(Tkinter.Frame):
         return
 
     def get_outpath(self):
-        outpath = tkFileDialog.askdirectory(parent=None, title='Select directory to decrypt to')
+        global outputPath
+        outpath = tkFileDialog.askdirectory(
+            parent=None,
+            title='Select directory to decrypt to',
+            initialdir=outputPath
+        )
         if outpath:
             outpath = os.path.normpath(outpath)
             self.outpath.delete(0, Tkconstants.END)
@@ -445,6 +466,13 @@ class DecryptionDialog(Tkinter.Frame):
                     return
                 self.status['text'] = 'Finished decrypting ' + inpath
 
+def decryption_key_exists():
+    if not os.path.exists(keyPath):
+        result = subprocess.call(["python2.7", keyGenPath])
+        return result == 0
+    else:
+        return True
+
 def gui_main():
     root = Tkinter.Tk()
     if AES is None:
@@ -458,9 +486,13 @@ def gui_main():
     root.title('INEPT EPUB Decrypter')
     root.resizable(True, False)
     root.minsize(300, 0)
-    DecryptionDialog(root).pack(fill=Tkconstants.X, expand=1)
-    root.mainloop()
-    return 0
+    #validate and generate decryption key
+    if decryption_key_exists():
+        DecryptionDialog(root).pack(fill=Tkconstants.X, expand=1)
+        root.mainloop()
+        return 0
+    else:
+        return 1
 
 if __name__ == '__main__':
     if len(sys.argv) > 1:
