@@ -454,6 +454,7 @@ class DecryptionDialog(Tkinter.Frame):
         else:
             inpath += '/'
             outpath += '/'
+        totaldecrypted = 0
         for fname in dirlist:
             root, ext = os.path.splitext(fname)
             if re.match(match, ext, re.IGNORECASE):
@@ -464,7 +465,11 @@ class DecryptionDialog(Tkinter.Frame):
                 except Exception, e:
                     self.status['text'] = 'Error in: ' + fname + str(e)
                     return
+                totaldecrypted = totaldecrypted+1
                 self.status['text'] = 'Finished decrypting ' + inpath
+        if totaldecrypted < 1:
+            self.status['text'] = 'No EPUB files available to decrypt'
+            return
 
 def decryption_key_exists():
     if not os.path.exists(keyPath):
