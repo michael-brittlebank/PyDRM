@@ -59,7 +59,7 @@ class ADEPTError(Exception):
     pass
 
 def _load_crypto_libcrypto():
-    from ctypes import CDLL, POINTER, c_void_p, c_char_p, c_int, c_long, \
+    from ctypes import CDLL, POINTER, c_char_p, c_int, c_long, \
         Structure, c_ulong, create_string_buffer, cast
     from ctypes.util import find_library
 
@@ -72,7 +72,6 @@ def _load_crypto_libcrypto():
     AES_MAXNR = 14
 
     c_char_pp = POINTER(c_char_p)
-    c_int_p = POINTER(c_int)
 
     class RSA(Structure):
         pass
@@ -378,9 +377,9 @@ class DecryptionDialog(Tkinter.Frame):
         button.grid(row=2, column=2)
         buttons = Tkinter.Frame(self)
         buttons.pack()
-        botton = Tkinter.Button(
+        button = Tkinter.Button(
             buttons, text="Decrypt", width=10, command=self.decrypt)
-        botton.pack(side=Tkconstants.LEFT)
+        button.pack(side=Tkconstants.LEFT)
         Tkinter.Frame(buttons, width=10).pack(side=Tkconstants.LEFT)
         button = Tkinter.Button(
             buttons, text="Quit", width=10, command=self.quit)

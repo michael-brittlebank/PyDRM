@@ -52,7 +52,7 @@ class ADEPTError(Exception):
 
 if sys.platform.startswith('win'):
     from ctypes import windll, c_char_p, c_wchar_p, c_uint, POINTER, byref, \
-        create_unicode_buffer, create_string_buffer, CFUNCTYPE, addressof, \
+        create_unicode_buffer, create_string_buffer, CFUNCTYPE, \
         string_at, Structure, c_void_p, cast, c_size_t, memmove
     from ctypes.wintypes import LPVOID, DWORD, BOOL
     import _winreg as winreg
@@ -324,7 +324,7 @@ elif sys.platform.startswith('darwin'):
         return True
 
 elif sys.platform.startswith('cygwin'):
-    def retrieve_key(keypath):
+    def retrieve_key():
         tkMessageBox.showerror(
             "ADEPT Key",
             "This script requires a Windows-native Python, and cannot be run "
@@ -333,7 +333,7 @@ elif sys.platform.startswith('cygwin'):
         return False
 
 else:
-    def retrieve_key(keypath):
+    def retrieve_key():
         tkMessageBox.showerror(
             "ADEPT Key",
             "This script only supports Windows and Mac OS X.  For Linux "
@@ -351,10 +351,9 @@ class ExceptionDialog(Tkinter.Frame):
         self.text.pack(fill=Tkconstants.BOTH, expand=1)
         self.text.insert(Tkconstants.END, text)
 
-def main(argv=sys.argv):
+def main():
     root = Tkinter.Tk()
     root.withdraw()
-    progname = os.path.basename(argv[0])
     #ensure the key .der file is created in the /lib directory
     currentdirectory = os.path.dirname(os.path.abspath(__file__))
     keypath = currentdirectory+'/adeptkey.der'
